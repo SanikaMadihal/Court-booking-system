@@ -1,35 +1,37 @@
-import { NextAuthOptions } from "next-auth"
-import CredentialsProvider from "next-auth/providers/credentials"
+import NextAuth from "next-auth"
+import Credentials from "next-auth/providers/credentials"
 import { prisma } from "./prisma"
 import bcrypt from "bcrypt"
 
-export const authOptions: NextAuthOptions = {
+export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
-    CredentialsProvider({
-      name: "Credentials",
+    Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Please enter an email and password")
+          return null
         }
 
         const user = await prisma.user.findUnique({
           where: {
-            email: credentials.email
+            email: credentials.email as string
           }
         })
 
         if (!user) {
-          throw new Error("No user found with this email")
+          return null
         }
 
-        const passwordMatch = await bcrypt.compare(credentials.password, user.password)
+        const passwordMatch = await bcrypt.compare(
+          credentials.password as string, 
+          user.password
+        )
 
         if (!passwordMatch) {
-          throw new Error("Incorrect password")
+          return null
         }
 
         return {
@@ -64,4 +66,4 @@ export const authOptions: NextAuthOptions = {
     }
   },
   secret: process.env.NEXTAUTH_SECRET,
-}
+})
