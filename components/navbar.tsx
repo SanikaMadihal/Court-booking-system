@@ -2,14 +2,20 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useSession, signOut } from "next-auth/react"
 import { User, LogOut, Settings, Clock, AlertCircle } from "lucide-react"
 import { useState } from "react"
 
 export default function Navbar() {
   const pathname = usePathname()
+  const { data: session } = useSession()
   const [showDropdown, setShowDropdown] = useState(false)
 
   const isActive = (path: string) => pathname === path
+  
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: "/login" })
+  }
 
   return (
     <nav className="sticky top-0 z-50 border-b-2 border-border bg-white shadow-md">
@@ -56,49 +62,68 @@ export default function Navbar() {
 
           {/* User Profile Dropdown */}
           <div className="relative">
-            <button
-              onClick={() => setShowDropdown(!showDropdown)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 border-2 border-primary text-primary font-semibold transition-all"
-            >
-              <User size={20} />
-              <span className="hidden sm:inline">Sign in</span>
-            </button>
-
-            {showDropdown && (
-              <div className="absolute right-0 mt-2 w-56 bg-white border-2 border-border rounded-lg shadow-lg overflow-hidden z-10">
-                <Link
-                  href="/profile"
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-primary/10 transition-colors border-b border-border"
+            {session ? (
+              <>
+                <button
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 border-2 border-primary text-primary font-semibold transition-all"
                 >
-                  <User size={18} className="text-primary" />
-                  <span className="font-semibold text-foreground">Profile</span>
-                </Link>
-                <Link
-                  href="/profile?tab=history"
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-primary/10 transition-colors border-b border-border"
-                >
-                  <Clock size={18} className="text-primary" />
-                  <span className="font-semibold text-foreground">My Bookings</span>
-                </Link>
-                <Link
-                  href="/profile?tab=penalties"
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-primary/10 transition-colors border-b border-border"
-                >
-                  <AlertCircle size={18} className="text-destructive" />
-                  <span className="font-semibold text-foreground">Penalties</span>
-                </Link>
-                <Link
-                  href="/profile?tab=settings"
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-primary/10 transition-colors border-b border-border"
-                >
-                  <Settings size={18} className="text-primary" />
-                  <span className="font-semibold text-foreground">Settings</span>
-                </Link>
-                <button className="w-full flex items-center gap-3 px-4 py-3 text-destructive hover:bg-destructive/10 transition-colors font-semibold">
-                  <LogOut size={18} />
-                  <span>Logout</span>
+                  <User size={20} />
+                  <span className="hidden sm:inline">{session.user.name}</span>
                 </button>
-              </div>
+
+                {showDropdown && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white border-2 border-border rounded-lg shadow-lg overflow-hidden z-10">
+                    <Link
+                      href="/profile"
+                      onClick={() => setShowDropdown(false)}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-primary/10 transition-colors border-b border-border"
+                    >
+                      <User size={18} className="text-primary" />
+                      <span className="font-semibold text-foreground">Profile</span>
+                    </Link>
+                    <Link
+                      href="/profile?tab=history"
+                      onClick={() => setShowDropdown(false)}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-primary/10 transition-colors border-b border-border"
+                    >
+                      <Clock size={18} className="text-primary" />
+                      <span className="font-semibold text-foreground">My Bookings</span>
+                    </Link>
+                    <Link
+                      href="/profile?tab=penalties"
+                      onClick={() => setShowDropdown(false)}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-primary/10 transition-colors border-b border-border"
+                    >
+                      <AlertCircle size={18} className="text-destructive" />
+                      <span className="font-semibold text-foreground">Penalties</span>
+                    </Link>
+                    <Link
+                      href="/profile?tab=settings"
+                      onClick={() => setShowDropdown(false)}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-primary/10 transition-colors border-b border-border"
+                    >
+                      <Settings size={18} className="text-primary" />
+                      <span className="font-semibold text-foreground">Settings</span>
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-destructive hover:bg-destructive/10 transition-colors font-semibold"
+                    >
+                      <LogOut size={18} />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-semibold transition-all"
+              >
+                <User size={20} />
+                <span className="hidden sm:inline">Sign In</span>
+              </Link>
             )}
           </div>
         </div>

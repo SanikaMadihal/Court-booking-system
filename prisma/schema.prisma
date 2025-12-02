@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          String    @default("student") // student, admin
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  bookings      Booking[]
+  penalties     Penalty[]
+}
+
+model Court {
+  id            String    @id @default(cuid())
+  name          String
+  sport         String    // badminton, table-tennis, squash
+  courtNumber   Int
+  maxCapacity   Int
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  bookings      Booking[]
+}
+
+model Booking {
+  id            String    @id @default(cuid())
+  userId        String
+  courtId       String
+  date          DateTime
+  startTime     String
+  endTime       String
+  status        String    @default("confirmed") // confirmed, cancelled, completed
+  participants  Int       @default(1)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  court         Court     @relation(fields: [courtId], references: [id], onDelete: Cascade)
+
+  @@unique([courtId, date, startTime])
+}
+
+model Penalty {
+  id            String    @id @default(cuid())
+  userId        String
+  reason        String
+  amount        Float
+  status        String    @default("active") // active, paid
+  issuedDate    DateTime  @default(now())
+  dueDate       DateTime
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Event {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  sport         String
+  date          DateTime
+  startTime     String
+  endTime       String
+  location      String
+  maxParticipants Int?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
