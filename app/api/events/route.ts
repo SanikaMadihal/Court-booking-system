@@ -8,7 +8,7 @@ export async function GET(req: Request) {
     const month = searchParams.get("month")
     const year = searchParams.get("year")
 
-    let whereClause: any = {
+    let whereClause: { date: { gte: Date; lte?: Date } } = {
       date: {
         gte: new Date()
       }
@@ -60,6 +60,15 @@ export async function POST(req: Request) {
     if (!title || !sport || !date || !startTime || !endTime || !location) {
       return NextResponse.json(
         { error: "Missing required fields" },
+        { status: 400 }
+      )
+    }
+
+    // Validate time ordering
+    // String comparison works for HH:MM format (e.g., "14:00" > "09:00")
+    if (startTime >= endTime) {
+      return NextResponse.json(
+        { error: "End time must be after start time" },
         { status: 400 }
       )
     }
