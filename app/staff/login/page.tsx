@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { signIn } from "next-auth/react"
+import { signIn, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -38,7 +38,7 @@ export default function StaffLoginPage() {
           router.refresh()
         } else {
           setError("Access denied. Staff credentials required.")
-          await signIn("credentials", { redirect: false }) // Sign out
+          await signOut({ redirect: false }) // Sign out non-staff user
         }
       }
     } catch (error) {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { ChevronLeft, ChevronRight, Calendar, AlertCircle, Phone, Trophy, Clock, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -22,11 +22,7 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchEvents()
-  }, [currentDate])
-
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     try {
       setLoading(true)
       const month = currentDate.getMonth()
@@ -39,7 +35,11 @@ export default function CalendarPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentDate])
+
+  useEffect(() => {
+    fetchEvents()
+  }, [fetchEvents])
 
   const getDaysInMonth = (date: Date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
@@ -62,7 +62,11 @@ export default function CalendarPage() {
   const getEventsForDate = (day: number): CalendarEvent[] => {
     return events.filter((e) => {
       const eventDate = new Date(e.date)
-      return eventDate.getDate() === day
+      return (
+        eventDate.getUTCDate() === day &&
+        eventDate.getUTCMonth() === currentDate.getMonth() &&
+        eventDate.getUTCFullYear() === currentDate.getFullYear()
+      )
     })
   }
 

@@ -85,6 +85,23 @@ export default function StaffDashboard() {
     setCreateLoading(true)
     setErrorMessage("")
 
+    // Validate time ordering
+    if (formData.startTime && formData.endTime && formData.startTime >= formData.endTime) {
+      setErrorMessage("End time must be after start time")
+      setCreateLoading(false)
+      return
+    }
+
+    // Validate date is not in the past
+    const eventDate = new Date(formData.date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    if (eventDate < today) {
+      setErrorMessage("Cannot create events in the past")
+      setCreateLoading(false)
+      return
+    }
+
     try {
       const response = await fetch("/api/events", {
         method: "POST",
@@ -118,8 +135,10 @@ export default function StaffDashboard() {
       })
 
       setTimeout(() => setSuccessMessage(""), 5000)
-    } catch (error: any) {
-      setErrorMessage(error.message)
+    } catch (error) {
+      console.error("Error creating event:", error)
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred"
+      setErrorMessage(errorMessage)
     } finally {
       setCreateLoading(false)
     }
