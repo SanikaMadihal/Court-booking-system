@@ -65,6 +65,7 @@ export async function POST(req: Request) {
     }
 
     // Validate time ordering
+    // String comparison works for HH:MM format (e.g., "14:00" > "09:00")
     if (startTime >= endTime) {
       return NextResponse.json(
         { error: "End time must be after start time" },

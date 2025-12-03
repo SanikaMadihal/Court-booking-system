@@ -86,16 +86,18 @@ export default function StaffDashboard() {
     setErrorMessage("")
 
     // Validate time ordering
+    // String comparison works for HH:MM format (e.g., "14:00" > "09:00")
     if (formData.startTime && formData.endTime && formData.startTime >= formData.endTime) {
       setErrorMessage("End time must be after start time")
       setCreateLoading(false)
       return
     }
 
-    // Validate date is not in the past
+    // Validate date is not in the past (using UTC to avoid timezone issues)
     const eventDate = new Date(formData.date)
+    eventDate.setUTCHours(0, 0, 0, 0)
     const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    today.setUTCHours(0, 0, 0, 0)
     if (eventDate < today) {
       setErrorMessage("Cannot create events in the past")
       setCreateLoading(false)
