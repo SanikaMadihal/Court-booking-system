@@ -22,6 +22,38 @@ async function main() {
 
   console.log('Created user:', user)
 
+  // Create a staff user
+  const staffPassword = await bcrypt.hash('staff123', 10)
+  
+  const staffUser = await prisma.user.upsert({
+    where: { email: 'staff@sportsarena.com' },
+    update: {},
+    create: {
+      email: 'staff@sportsarena.com',
+      name: 'Arena Staff',
+      password: staffPassword,
+      role: 'staff',
+    },
+  })
+
+  console.log('Created staff user:', staffUser)
+
+  // Create an admin user
+  const adminPassword = await bcrypt.hash('admin123', 10)
+  
+  const adminUser = await prisma.user.upsert({
+    where: { email: 'admin@sportsarena.com' },
+    update: {},
+    create: {
+      email: 'admin@sportsarena.com',
+      name: 'Arena Admin',
+      password: adminPassword,
+      role: 'admin',
+    },
+  })
+
+  console.log('Created admin user:', adminUser)
+
   // Create courts
   const badmintonCourts = await Promise.all([
     prisma.court.upsert({

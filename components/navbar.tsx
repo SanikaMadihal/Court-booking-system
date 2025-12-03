@@ -3,8 +3,9 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useSession, signOut } from "next-auth/react"
-import { User, LogOut, Settings, Clock, AlertCircle } from "lucide-react"
+import { User, LogOut, Settings, Clock, AlertCircle, Shield, LayoutDashboard } from "lucide-react"
 import { useState } from "react"
+import Image from "next/image"
 
 export default function Navbar() {
   const pathname = usePathname()
@@ -12,6 +13,7 @@ export default function Navbar() {
   const [showDropdown, setShowDropdown] = useState(false)
 
   const isActive = (path: string) => pathname === path
+  const isStaffOrAdmin = session?.user?.role === "staff" || session?.user?.role === "admin"
   
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/login" })
@@ -23,8 +25,19 @@ export default function Navbar() {
         <div className="flex items-center justify-between">
           {/* Logo and Title */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center text-white font-bold text-lg">
-              SA
+            <div className="w-10 h-10 relative overflow-hidden rounded-lg">
+              <Image 
+                src="/logo.svg" 
+                alt="Sports Arena Logo"
+                width={40}
+                height={40}
+                className="object-contain"
+                onError={(e) => {
+                  // Fallback to text logo if image doesn't load
+                  e.currentTarget.style.display = 'none'
+                  e.currentTarget.parentElement!.innerHTML = '<div class="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center text-white font-bold text-lg">SA</div>'
+                }}
+              />
             </div>
             <div>
               <div className="text-xl font-bold text-primary">Sports Arena</div>
@@ -58,6 +71,17 @@ export default function Navbar() {
             >
               Calendar
             </Link>
+            {isStaffOrAdmin && (
+              <Link
+                href="/staff/dashboard"
+                className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+                  isActive("/staff/dashboard") ? "bg-secondary text-secondary-foreground" : "text-secondary hover:bg-secondary/10"
+                }`}
+              >
+                <LayoutDashboard size={18} />
+                Staff Dashboard
+              </Link>
+            )}
           </div>
 
           {/* User Profile Dropdown */}
@@ -114,16 +138,25 @@ export default function Navbar() {
                       <span>Logout</span>
                     </button>
                   </div>
-                )}
-              </>
+            )}
+          </>
             ) : (
-              <Link
-                href="/login"
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-semibold transition-all"
-              >
-                <User size={20} />
-                <span className="hidden sm:inline">Sign In</span>
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/staff/login"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted font-medium transition-all"
+                >
+                  <Shield size={18} />
+                  <span className="hidden sm:inline">Staff</span>
+                </Link>
+                <Link
+                  href="/login"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-semibold transition-all"
+                >
+                  <User size={20} />
+                  <span className="hidden sm:inline">Sign In</span>
+                </Link>
+              </div>
             )}
           </div>
         </div>
