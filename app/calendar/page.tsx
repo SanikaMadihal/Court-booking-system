@@ -1,26 +1,45 @@
 "use client"
 
-import { useState } from "react"
-import { ChevronLeft, ChevronRight, Calendar, AlertCircle, Phone } from "lucide-react"
+import { useState, useEffect } from "react"
+import { ChevronLeft, ChevronRight, Calendar, AlertCircle, Phone, Trophy, Clock, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface CalendarEvent {
-  date: number
+  id: string
   title: string
-  type: "tournament" | "maintenance"
+  description: string | null
+  sport: string
+  date: string
+  startTime: string
+  endTime: string
+  location: string
+  maxParticipants: number | null
 }
-
-const CALENDAR_EVENTS: CalendarEvent[] = [
-  { date: 5, title: "Badminton Tournament", type: "tournament" },
-  { date: 12, title: "Court Maintenance", type: "maintenance" },
-  { date: 15, title: "Table Tennis Championship", type: "tournament" },
-  { date: 22, title: "Squash League Finals", type: "tournament" },
-  { date: 28, title: "Annual Inspection", type: "maintenance" },
-]
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<number | null>(null)
+  const [events, setEvents] = useState<CalendarEvent[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchEvents()
+  }, [currentDate])
+
+  const fetchEvents = async () => {
+    try {
+      setLoading(true)
+      const month = currentDate.getMonth()
+      const year = currentDate.getFullYear()
+      const response = await fetch(`/api/events?month=${month}&year=${year}`)
+      const data = await response.json()
+      setEvents(data)
+    } catch (error) {
+      console.error("Failed to fetch events:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const getDaysInMonth = (date: Date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
@@ -32,14 +51,27 @@ export default function CalendarPage() {
 
   const prevMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))
+    setSelectedDate(null)
   }
 
   const nextMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))
+    setSelectedDate(null)
   }
 
-  const getEventForDate = (day: number): CalendarEvent | undefined => {
-    return CALENDAR_EVENTS.find((e) => e.date === day)
+  const getEventsForDate = (day: number): CalendarEvent[] => {
+    return events.filter((e) => {
+      const eventDate = new Date(e.date)
+      return eventDate.getDate() === day
+    })
+  }
+
+  const getEventTypeForDisplay = (event: CalendarEvent): "tournament" | "maintenance" => {
+    const title = event.title.toLowerCase()
+    if (title.includes("maintenance") || title.includes("inspection") || title.includes("repair")) {
+      return "maintenance"
+    }
+    return "tournament"
   }
 
   const daysInMonth = getDaysInMonth(currentDate)
@@ -83,34 +115,49 @@ export default function CalendarPage() {
               ))}
             </div>
 
-            {/* Calendar Days */}
-            <div className="grid grid-cols-7 gap-2">
-              {calendarDays.map((day, idx) => {
-                const event = day ? getEventForDate(day) : undefined
-                const isSelected = day === selectedDate
+            {/* Loading State */}
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              /* Calendar Days */
+              <div className="grid grid-cols-7 gap-2">
+                {calendarDays.map((day, idx) => {
+                  const dayEvents = day ? getEventsForDate(day) : []
+                  const hasEvents = dayEvents.length > 0
+                  const isSelected = day === selectedDate
+                  const hasTournament = dayEvents.some(e => getEventTypeForDisplay(e) === "tournament")
+                  const hasMaintenance = dayEvents.some(e => getEventTypeForDisplay(e) === "maintenance")
 
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => day && setSelectedDate(day)}
-                    className={`aspect-square p-2 rounded-lg border-2 text-sm font-semibold transition-all flex flex-col items-center justify-center ${
-                      !day
-                        ? "bg-white border-transparent"
-                        : isSelected
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : event
-                            ? event.type === "tournament"
-                              ? "bg-secondary/20 text-foreground border-secondary"
-                              : "bg-red-100 text-foreground border-red-500"
-                            : "bg-white text-foreground border-border hover:border-primary"
-                    }`}
-                  >
-                    {day}
-                    {event && <div className="text-xs mt-1">{event.type === "tournament" ? "🏆" : "🔧"}</div>}
-                  </button>
-                )
-              })}
-            </div>
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => day && setSelectedDate(day)}
+                      className={`aspect-square p-2 rounded-lg border-2 text-sm font-semibold transition-all flex flex-col items-center justify-center ${
+                        !day
+                          ? "bg-white border-transparent"
+                          : isSelected
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : hasMaintenance
+                              ? "bg-red-100 text-foreground border-red-500"
+                              : hasTournament
+                                ? "bg-secondary/20 text-foreground border-secondary"
+                                : "bg-white text-foreground border-border hover:border-primary"
+                      }`}
+                    >
+                      {day}
+                      {hasEvents && (
+                        <div className="text-xs mt-1">
+                          {hasTournament && "🏆"}
+                          {hasMaintenance && "🔧"}
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* Legend and Info */}
@@ -156,18 +203,35 @@ export default function CalendarPage() {
                     { weekday: "long", month: "long", day: "numeric" },
                   )}
                 </h4>
-                {getEventForDate(selectedDate) ? (
-                  <div className="space-y-2">
-                    <p className="text-sm text-foreground font-semibold">{getEventForDate(selectedDate)?.title}</p>
-                    <span
-                      className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                        getEventForDate(selectedDate)?.type === "tournament"
-                          ? "bg-secondary/20 text-secondary"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {getEventForDate(selectedDate)?.type === "tournament" ? "Tournament" : "Maintenance"}
-                    </span>
+                {getEventsForDate(selectedDate).length > 0 ? (
+                  <div className="space-y-3">
+                    {getEventsForDate(selectedDate).map((event) => (
+                      <div key={event.id} className="space-y-2 pb-3 border-b border-border last:border-b-0">
+                        <p className="text-sm text-foreground font-semibold">{event.title}</p>
+                        {event.description && (
+                          <p className="text-xs text-muted-foreground">{event.description}</p>
+                        )}
+                        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Clock size={12} />
+                            {event.startTime} - {event.endTime}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <MapPin size={12} />
+                            {event.location}
+                          </span>
+                        </div>
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                            getEventTypeForDisplay(event) === "tournament"
+                              ? "bg-secondary/20 text-secondary"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {event.sport}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">No events scheduled</p>
@@ -179,29 +243,48 @@ export default function CalendarPage() {
 
         {/* Events List */}
         <div className="mt-8 bg-card border-2 border-border rounded-lg p-6">
-          <h3 className="text-2xl font-bold text-foreground mb-4">Upcoming Events</h3>
-          <div className="space-y-3">
-            {CALENDAR_EVENTS.map((event, idx) => (
-              <div key={idx} className="flex items-start gap-4 pb-3 border-b border-border last:border-b-0">
-                <div className={`mt-1 ${event.type === "tournament" ? "text-secondary" : "text-red-500"}`}>
-                  {event.type === "tournament" ? <Calendar size={20} /> : <AlertCircle size={20} />}
+          <h3 className="text-2xl font-bold text-foreground mb-4">Events This Month</h3>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : events.length === 0 ? (
+            <div className="text-center py-8">
+              <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">No events scheduled for this month</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {events.map((event) => (
+                <div key={event.id} className="flex items-start gap-4 pb-3 border-b border-border last:border-b-0">
+                  <div className={`mt-1 ${getEventTypeForDisplay(event) === "tournament" ? "text-secondary" : "text-red-500"}`}>
+                    {getEventTypeForDisplay(event) === "tournament" ? <Trophy size={20} /> : <AlertCircle size={20} />}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-foreground">{event.title}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(event.date).toLocaleDateString("en-US", { 
+                        weekday: "short", 
+                        month: "long", 
+                        day: "numeric" 
+                      })} • {event.startTime} - {event.endTime}
+                    </p>
+                    <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                      <MapPin size={14} />
+                      {event.location}
+                    </p>
+                  </div>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${
+                      getEventTypeForDisplay(event) === "tournament" ? "bg-secondary/20 text-secondary" : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    {event.sport}
+                  </span>
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-foreground">{event.title}</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {currentDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })} {event.date}
-                  </p>
-                </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    event.type === "tournament" ? "bg-secondary/20 text-secondary" : "bg-red-100 text-red-700"
-                  }`}
-                >
-                  {event.type === "tournament" ? "Tournament" : "Maintenance"}
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
