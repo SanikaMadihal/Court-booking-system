@@ -9,7 +9,7 @@ export default function Home() {
         sport="Badminton"
         title="Badminton Courts"
         description="Book premium badminton courts with professional-grade facilities. Perfect for casual players and tournaments."
-        imageSrc="/badminton-court-with-players.svg"
+        imageSrc="/Badminton.png"
         imagePosition="right"
         href="/booking?sport=badminton"
       />
@@ -19,7 +19,7 @@ export default function Home() {
         sport="Table Tennis"
         title="Table Tennis Tables"
         description="State-of-the-art table tennis facilities with international standard tables. Ideal for matches and practice sessions."
-        imageSrc="/table-tennis-players-in-action.svg"
+        imageSrc="/table-tennis.png"
         imagePosition="left"
         href="/booking?sport=table-tennis"
       />
@@ -29,7 +29,7 @@ export default function Home() {
         sport="Squash"
         title="Squash Courts"
         description="Modern squash courts with perfect acoustics and lighting. Experience competitive play at its finest."
-        imageSrc="/squash-court-professional.svg"
+        imageSrc="/squash.jpg"
         imagePosition="right"
         href="/booking?sport=squash"
       />
