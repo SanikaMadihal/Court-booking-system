@@ -34,6 +34,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# generated deployment configs
+.env.vercel.example
+
 # database
 *.db
 *.db-journal
