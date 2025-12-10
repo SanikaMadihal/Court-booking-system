@@ -36,11 +36,14 @@ A full-stack Next.js application for managing sports court bookings at your camp
 
 - **Framework:** Next.js 16 (App Router)
 - **Language:** TypeScript
-- **Database:** SQLite (via Prisma ORM)
+- **Database:** PostgreSQL (via Prisma ORM)
+  - SQLite for local development
+  - PostgreSQL for production (Vercel Postgres, Neon, etc.)
 - **Authentication:** NextAuth v5
 - **Styling:** Tailwind CSS
 - **UI Components:** Radix UI
 - **Form Validation:** Zod + React Hook Form
+- **Deployment:** Vercel
 
 ## Getting Started
 
@@ -207,6 +210,44 @@ git push origin feature/your-feature-name
 - Test your changes locally before pushing
 - Review Pull Requests from teammates
 - Keep the main branch stable
+
+## Deployment
+
+This project is configured for easy deployment on Vercel.
+
+### Quick Deploy to Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/YOUR_USERNAME/sports-arena-court-booking)
+
+### Manual Deployment
+
+1. **Set up a PostgreSQL database** (choose one):
+   - [Vercel Postgres](https://vercel.com/storage/postgres) (recommended)
+   - [Neon](https://neon.tech) (3GB free)
+   - [PlanetScale](https://planetscale.com) (5GB free)
+
+2. **Push to GitHub**
+   ```bash
+   git push origin main
+   ```
+
+3. **Import to Vercel**
+   - Go to https://vercel.com
+   - Click **New Project**
+   - Import your repository
+   - Add environment variables:
+     - `DATABASE_URL` - Your PostgreSQL connection string
+     - `NEXTAUTH_URL` - Your Vercel URL (e.g., `https://your-app.vercel.app`)
+     - `NEXTAUTH_SECRET` - Run `openssl rand -base64 32` to generate
+     - `NODE_ENV=production`
+
+4. **Deploy and initialize database**
+   ```bash
+   # After deployment, run migrations
+   npx prisma db push
+   ```
+
+📖 **Full deployment guide:** See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions.
 
 ## Future Enhancements
 
