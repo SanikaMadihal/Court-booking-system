@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { ChevronLeft, ChevronRight, Calendar, AlertCircle, Phone, Trophy, Clock, MapPin } from "lucide-react"
+import { useSession } from "next-auth/react"
+import { ChevronLeft, ChevronRight, Calendar, AlertCircle, Phone, Trophy, Clock, MapPin, User, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface CalendarEvent {
@@ -16,30 +17,110 @@ interface CalendarEvent {
   maxParticipants: number | null
 }
 
+interface Booking {
+  id: string
+  courtId: string
+  date: string
+  startTime: string
+  endTime: string
+  status: string
+  court: {
+    name: string
+    sport: string
+  }
+}
+
+type CalendarItem = {
+  id: string
+  title: string
+  description?: string | null
+  sport: string
+  date: string
+  startTime: string
+  endTime: string
+  location: string
+  type: 'tournament' | 'maintenance' | 'booking'
+}
+
 export default function CalendarPage() {
+  const { data: session } = useSession()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<number | null>(null)
-  const [events, setEvents] = useState<CalendarEvent[]>([])
+  const [items, setItems] = useState<CalendarItem[]>([])
   const [loading, setLoading] = useState(true)
 
-  const fetchEvents = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true)
       const month = currentDate.getMonth()
       const year = currentDate.getFullYear()
-      const response = await fetch(`/api/events?month=${month}&year=${year}`)
-      const data = await response.json()
-      setEvents(data)
+      
+      const [eventsRes, bookingsRes] = await Promise.all([
+        fetch(`/api/events?month=${month}&year=${year}`),
+        fetch(`/api/bookings`)
+      ])
+      
+      const eventsData: CalendarEvent[] = await eventsRes.json()
+      const bookingsData: Booking[] = await bookingsRes.json()
+
+      const mappedEvents: CalendarItem[] = eventsData.map(event => {
+        const title = event.title.toLowerCase()
+        const type = (title.includes("maintenance") || title.includes("inspection") || title.includes("repair")) 
+          ? "maintenance" 
+          : "tournament"
+        
+        return {
+          ...event,
+          type
+        }
+      })
+
+      const mappedBookings: CalendarItem[] = Array.isArray(bookingsData) ? bookingsData
+        .filter(booking => booking.status !== "cancelled")
+        .map(booking => ({
+        id: booking.id,
+        title: "My Booking",
+        description: `Court: ${booking.court.name}`,
+        sport: booking.court.sport,
+        date: booking.date,
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+        location: booking.court.name,
+        type: 'booking'
+      })) : []
+
+      setItems([...mappedEvents, ...mappedBookings])
     } catch (error) {
-      console.error("Failed to fetch events:", error)
+      console.error("Failed to fetch data:", error)
     } finally {
       setLoading(false)
     }
   }, [currentDate])
 
+  const handleDeleteEvent = async (eventId: string, e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent triggering date selection if inside a clickable area
+    if (!confirm("Are you sure you want to delete this event?")) return
+
+    try {
+      const res = await fetch(`/api/events/${eventId}`, {
+        method: "DELETE",
+      })
+
+      if (res.ok) {
+        fetchData()
+      } else {
+        console.error("Failed to delete event")
+        alert("Failed to delete event")
+      }
+    } catch (error) {
+      console.error("Error deleting event:", error)
+      alert("Error deleting event")
+    }
+  }
+
   useEffect(() => {
-    fetchEvents()
-  }, [fetchEvents])
+    fetchData()
+  }, [fetchData])
 
   const getDaysInMonth = (date: Date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
@@ -59,23 +140,15 @@ export default function CalendarPage() {
     setSelectedDate(null)
   }
 
-  const getEventsForDate = (day: number): CalendarEvent[] => {
-    return events.filter((e) => {
-      const eventDate = new Date(e.date)
+  const getItemsForDate = (day: number): CalendarItem[] => {
+    return items.filter((item) => {
+      const itemDate = new Date(item.date)
       return (
-        eventDate.getUTCDate() === day &&
-        eventDate.getUTCMonth() === currentDate.getMonth() &&
-        eventDate.getUTCFullYear() === currentDate.getFullYear()
+        itemDate.getDate() === day &&
+        itemDate.getMonth() === currentDate.getMonth() &&
+        itemDate.getFullYear() === currentDate.getFullYear()
       )
     })
-  }
-
-  const getEventTypeForDisplay = (event: CalendarEvent): "tournament" | "maintenance" => {
-    const title = event.title.toLowerCase()
-    if (title.includes("maintenance") || title.includes("inspection") || title.includes("repair")) {
-      return "maintenance"
-    }
-    return "tournament"
   }
 
   const daysInMonth = getDaysInMonth(currentDate)
@@ -93,7 +166,7 @@ export default function CalendarPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-foreground mb-2">Facility Calendar</h1>
-          <p className="text-muted-foreground">View upcoming tournaments, events, and maintenance schedules</p>
+          <p className="text-muted-foreground">View upcoming tournaments, events, maintenance schedules, and your bookings</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -128,11 +201,12 @@ export default function CalendarPage() {
               /* Calendar Days */
               <div className="grid grid-cols-7 gap-2">
                 {calendarDays.map((day, idx) => {
-                  const dayEvents = day ? getEventsForDate(day) : []
-                  const hasEvents = dayEvents.length > 0
+                  const dayItems = day ? getItemsForDate(day) : []
+                  const hasItems = dayItems.length > 0
                   const isSelected = day === selectedDate
-                  const hasTournament = dayEvents.some(e => getEventTypeForDisplay(e) === "tournament")
-                  const hasMaintenance = dayEvents.some(e => getEventTypeForDisplay(e) === "maintenance")
+                  const hasTournament = dayItems.some(e => e.type === "tournament")
+                  const hasMaintenance = dayItems.some(e => e.type === "maintenance")
+                  const hasBooking = dayItems.some(e => e.type === "booking")
 
                   return (
                     <button
@@ -145,16 +219,19 @@ export default function CalendarPage() {
                             ? "bg-primary text-primary-foreground border-primary"
                             : hasMaintenance
                               ? "bg-red-100 text-foreground border-red-500"
-                              : hasTournament
-                                ? "bg-secondary/20 text-foreground border-secondary"
-                                : "bg-white text-foreground border-border hover:border-primary"
+                              : hasBooking
+                                ? "bg-green-100 text-foreground border-green-500"
+                                : hasTournament
+                                  ? "bg-secondary/20 text-foreground border-secondary"
+                                  : "bg-white text-foreground border-border hover:border-primary"
                       }`}
                     >
                       {day}
-                      {hasEvents && (
-                        <div className="text-xs mt-1">
+                      {hasItems && (
+                        <div className="text-xs mt-1 flex gap-0.5">
                           {hasTournament && "🏆"}
                           {hasMaintenance && "🔧"}
+                          {hasBooking && "📅"}
                         </div>
                       )}
                     </button>
@@ -177,6 +254,10 @@ export default function CalendarPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-6 h-6 bg-red-100 border-2 border-red-500 rounded"></div>
                   <span className="text-sm text-foreground">Maintenance</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 bg-green-100 border-2 border-green-500 rounded"></div>
+                  <span className="text-sm text-foreground">My Booking</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-6 h-6 bg-primary border-2 border-primary rounded"></div>
@@ -207,38 +288,52 @@ export default function CalendarPage() {
                     { weekday: "long", month: "long", day: "numeric" },
                   )}
                 </h4>
-                {getEventsForDate(selectedDate).length > 0 ? (
+                {getItemsForDate(selectedDate).length > 0 ? (
                   <div className="space-y-3">
-                    {getEventsForDate(selectedDate).map((event) => (
-                      <div key={event.id} className="space-y-2 pb-3 border-b border-border last:border-b-0">
-                        <p className="text-sm text-foreground font-semibold">{event.title}</p>
-                        {event.description && (
-                          <p className="text-xs text-muted-foreground">{event.description}</p>
+                    {getItemsForDate(selectedDate).map((item) => (
+                      <div key={item.id} className="space-y-2 pb-3 border-b border-border last:border-b-0">
+                        <p className="text-sm text-foreground font-semibold">{item.title}</p>
+                        {item.description && (
+                          <p className="text-xs text-muted-foreground">{item.description}</p>
                         )}
                         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Clock size={12} />
-                            {event.startTime} - {event.endTime}
+                            {item.startTime} - {item.endTime}
                           </span>
                           <span className="flex items-center gap-1">
                             <MapPin size={12} />
-                            {event.location}
+                            {item.location}
                           </span>
                         </div>
-                        <span
-                          className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                            getEventTypeForDisplay(event) === "tournament"
-                              ? "bg-secondary/20 text-secondary"
-                              : "bg-red-100 text-red-700"
-                          }`}
-                        >
-                          {event.sport}
-                        </span>
+                        <div className="flex items-center justify-between mt-2">
+                          <span
+                            className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                              item.type === "tournament"
+                                ? "bg-secondary/20 text-secondary"
+                                : item.type === "maintenance"
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-green-100 text-green-700"
+                            }`}
+                          >
+                            {item.sport}
+                          </span>
+                          {(session?.user?.role === "admin" || session?.user?.role === "staff") && (item.type === "tournament" || item.type === "maintenance") && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
+                              onClick={(e) => handleDeleteEvent(item.id, e)}
+                            >
+                              <Trash2 size={14} />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No events scheduled</p>
+                  <p className="text-sm text-muted-foreground">No events or bookings scheduled</p>
                 )}
               </div>
             )}
@@ -247,44 +342,66 @@ export default function CalendarPage() {
 
         {/* Events List */}
         <div className="mt-8 bg-card border-2 border-border rounded-lg p-6">
-          <h3 className="text-2xl font-bold text-foreground mb-4">Events This Month</h3>
+          <h3 className="text-2xl font-bold text-foreground mb-4">Events & Bookings This Month</h3>
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-          ) : events.length === 0 ? (
+          ) : items.length === 0 ? (
             <div className="text-center py-8">
               <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground">No events scheduled for this month</p>
+              <p className="text-muted-foreground">No events or bookings scheduled for this month</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {events.map((event) => (
-                <div key={event.id} className="flex items-start gap-4 pb-3 border-b border-border last:border-b-0">
-                  <div className={`mt-1 ${getEventTypeForDisplay(event) === "tournament" ? "text-secondary" : "text-red-500"}`}>
-                    {getEventTypeForDisplay(event) === "tournament" ? <Trophy size={20} /> : <AlertCircle size={20} />}
+              {items.map((item) => (
+                <div key={item.id} className="flex items-start gap-4 pb-3 border-b border-border last:border-b-0">
+                  <div className={`mt-1 ${
+                    item.type === "tournament" 
+                      ? "text-secondary" 
+                      : item.type === "maintenance" 
+                        ? "text-red-500" 
+                        : "text-green-500"
+                  }`}>
+                    {item.type === "tournament" ? <Trophy size={20} /> : item.type === "maintenance" ? <AlertCircle size={20} /> : <User size={20} />}
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-semibold text-foreground">{event.title}</h4>
+                    <h4 className="font-semibold text-foreground">{item.title}</h4>
                     <p className="text-sm text-muted-foreground">
-                      {new Date(event.date).toLocaleDateString("en-US", { 
+                      {new Date(item.date).toLocaleDateString("en-US", { 
                         weekday: "short", 
                         month: "long", 
                         day: "numeric" 
-                      })} • {event.startTime} - {event.endTime}
+                      })} • {item.startTime} - {item.endTime}
                     </p>
                     <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                       <MapPin size={14} />
-                      {event.location}
+                      {item.location}
                     </p>
                   </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${
-                      getEventTypeForDisplay(event) === "tournament" ? "bg-secondary/20 text-secondary" : "bg-red-100 text-red-700"
-                    }`}
-                  >
-                    {event.sport}
-                  </span>
+                  <div className="flex flex-col items-end gap-2">
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${
+                        item.type === "tournament" 
+                          ? "bg-secondary/20 text-secondary" 
+                          : item.type === "maintenance" 
+                            ? "bg-red-100 text-red-700" 
+                            : "bg-green-100 text-green-700"
+                      }`}
+                    >
+                      {item.sport}
+                    </span>
+                    {(session?.user?.role === "admin" || session?.user?.role === "staff") && (item.type === "tournament" || item.type === "maintenance") && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
+                        onClick={(e) => handleDeleteEvent(item.id, e)}
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
