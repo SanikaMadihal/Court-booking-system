@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -19,9 +19,11 @@ export async function PATCH(
     const body = await req.json()
     const { status } = body
 
+    const { id } = await params
+
     // Verify booking belongs to user
     const booking = await prisma.booking.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!booking) {
@@ -40,7 +42,7 @@ export async function PATCH(
 
     // Update booking
     const updatedBooking = await prisma.booking.update({
-      where: { id: params.id },
+      where: { id },
       data: { status },
       include: {
         court: true
@@ -59,7 +61,7 @@ export async function PATCH(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -71,9 +73,11 @@ export async function DELETE(
       )
     }
 
+    const { id } = await params
+
     // Verify booking belongs to user
     const booking = await prisma.booking.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!booking) {
@@ -91,7 +95,7 @@ export async function DELETE(
     }
 
     await prisma.booking.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     return NextResponse.json(
