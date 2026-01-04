@@ -56,8 +56,8 @@ export default function CalendarPage() {
       const year = currentDate.getFullYear()
       
       const [eventsRes, bookingsRes] = await Promise.all([
-        fetch(`/api/events?month=${month}&year=${year}`),
-        fetch(`/api/bookings`)
+        fetch(`/api/events?month=${month}&year=${year}`, { cache: 'no-store' }),
+        fetch(`/api/bookings`, { cache: 'no-store' })
       ])
       
       const eventsData: CalendarEvent[] = await eventsRes.json()
