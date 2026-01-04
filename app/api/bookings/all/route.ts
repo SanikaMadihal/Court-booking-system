@@ -22,6 +22,9 @@ export async function GET(request: Request) {
             gte: startOfDay,
             lte: endOfDay,
           },
+          status: {
+            not: "cancelled"
+          }
         },
         select: {
           id: true,
