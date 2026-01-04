@@ -6,13 +6,19 @@ export async function middleware(request: NextRequest) {
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
+    secureCookie: process.env.NODE_ENV === "production",
   })
 
   const isAuthPage = request.nextUrl.pathname.startsWith("/login") || 
                      request.nextUrl.pathname.startsWith("/signup") ||
                      request.nextUrl.pathname.startsWith("/staff/login")
 
-  const isStaffPage = request.nextUrl.pathname.startsWith("/staff/dashboard")
+  const isStaffPage = request.nextUrl.pathname.startsWith("/staff") && 
+                      !request.nextUrl.pathname.startsWith("/staff/login")
+  
+  const isProtectedPage = request.nextUrl.pathname.startsWith("/booking") ||
+                          request.nextUrl.pathname.startsWith("/profile") ||
+                          request.nextUrl.pathname.startsWith("/calendar")
 
   if (isAuthPage) {
     if (token) {
@@ -39,10 +45,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  if (!token) {
-    const loginUrl = new URL("/login", request.url)
-    loginUrl.searchParams.set("callbackUrl", request.nextUrl.pathname)
-    return NextResponse.redirect(loginUrl)
+  // Protected user routes
+  if (isProtectedPage) {
+    if (!token) {
+      const loginUrl = new URL("/login", request.url)
+      loginUrl.searchParams.set("callbackUrl", request.nextUrl.pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+    return NextResponse.next()
   }
 
   return NextResponse.next()
