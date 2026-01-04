@@ -103,7 +103,7 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                placeholder="you@university.edu"
+                placeholder="you@kletech.ac.in"
               />
             </div>
             <div>

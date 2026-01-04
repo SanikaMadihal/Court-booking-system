@@ -7,13 +7,13 @@ async function main() {
   console.log('Seeding database...')
 
   // Create a test user
-  const hashedPassword = await bcrypt.hash('password123', 10)
+  const hashedPassword = await bcrypt.hash('test123', 10)
   
   const user = await prisma.user.upsert({
-    where: { email: 'test@university.edu' },
+    where: { email: 'test@kletech.ac.in' },
     update: {},
     create: {
-      email: 'test@university.edu',
+      email: 'test@kletech.ac.in',
       name: 'Test User',
       password: hashedPassword,
       role: 'student',
@@ -26,10 +26,10 @@ async function main() {
   const staffPassword = await bcrypt.hash('staff123', 10)
   
   const staffUser = await prisma.user.upsert({
-    where: { email: 'staff@sportsarena.com' },
+    where: { email: 'staff@kletech.ac.in' },
     update: {},
     create: {
-      email: 'staff@sportsarena.com',
+      email: 'staff@kletech.ac.in',
       name: 'Arena Staff',
       password: staffPassword,
       role: 'staff',
@@ -42,10 +42,10 @@ async function main() {
   const adminPassword = await bcrypt.hash('admin123', 10)
   
   const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@sportsarena.com' },
+    where: { email: 'admin@kletech.ac.in' },
     update: {},
     create: {
-      email: 'admin@sportsarena.com',
+      email: 'admin@kletech.ac.in',
       name: 'Arena Admin',
       password: adminPassword,
       role: 'admin',

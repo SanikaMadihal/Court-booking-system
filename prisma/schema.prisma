@@ -6,8 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -54,10 +55,10 @@ model Penalty {
   id            String    @id @default(cuid())
   userId        String
   reason        String
-  amount        Float
-  status        String    @default("active") // active, paid
+  severity      String    @default("low") // low (warning), medium (3 bookings/week), high (2 bookings/week)
+  status        String    @default("active") // active, resolved
   issuedDate    DateTime  @default(now())
-  dueDate       DateTime
+  expiresAt     DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)

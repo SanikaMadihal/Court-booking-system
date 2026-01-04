@@ -194,7 +194,7 @@ export default function CalendarPage() {
                   <p className="text-sm text-foreground">To book facility for an event, contact:</p>
                 </div>
               </div>
-              <p className="text-lg font-bold text-foreground">+1 (555) 123-4567</p>
+              <p className="text-lg font-bold text-foreground">+91 9876543210</p>
               <p className="text-xs text-muted-foreground mt-2">Available 9am - 5pm, Mon-Fri</p>
             </div>
 

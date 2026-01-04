@@ -1,34 +1,49 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Loader2 } from "lucide-react"
+
 interface Penalty {
   id: string
-  type: string
   reason: string
-  startDate: string
-  endDate: string
-  severity: "low" | "medium" | "high"
+  severity: string
+  status: string
+  issuedDate: string
+  expiresAt: string | null
 }
 
-const PENALTIES: Penalty[] = [
-  {
-    id: "PEN-001",
-    type: "No-show Penalty",
-    reason: "Missed booking on Dec 1, 2024",
-    startDate: "Dec 2, 2024",
-    endDate: "Dec 8, 2024",
-    severity: "low",
-  },
-  {
-    id: "PEN-002",
-    type: "Late Cancellation",
-    reason: "Cancelled within 1 hour of booking",
-    startDate: "Nov 25, 2024",
-    endDate: "Nov 27, 2024",
-    severity: "low",
-  },
-]
-
 export default function ActivePenalties() {
+  const [penalties, setPenalties] = useState<Penalty[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchPenalties = async () => {
+      try {
+        const response = await fetch("/api/penalties")
+        if (response.ok) {
+          const data = await response.json()
+          setPenalties(data)
+        }
+      } catch (error) {
+        console.error("Error fetching penalties:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPenalties()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   // Show empty state if no penalties
-  if (PENALTIES.length === 0) {
+  if (penalties.length === 0) {
     return (
       <div className="bg-green/10 border-2 border-green rounded-lg p-12 text-center">
         <p className="text-lg font-semibold text-green mb-2">No Active Penalties</p>
@@ -37,37 +52,51 @@ export default function ActivePenalties() {
     )
   }
 
+  const getRestrictionText = (severity: string): string => {
+    if (severity === "low") return "Warning - No booking restrictions"
+    if (severity === "medium") return "Maximum 3 bookings per week"
+    if (severity === "high") return "Maximum 2 bookings per week"
+    return "Unknown"
+  }
+
   return (
     <div className="space-y-4">
-      {PENALTIES.map((penalty) => (
-        <div key={penalty.id} className="bg-card border-2 border-border rounded-lg p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h4 className="text-lg font-bold text-foreground">{penalty.type}</h4>
-              <p className="text-sm text-muted-foreground">{penalty.reason}</p>
+      {penalties.map((penalty) => {
+        return (
+          <div key={penalty.id} className="bg-card border-2 border-border rounded-lg p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <h4 className="text-lg font-bold text-foreground capitalize">{penalty.severity} Penalty</h4>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      penalty.severity === "high"
+                        ? "bg-destructive/20 text-destructive"
+                        : penalty.severity === "medium"
+                          ? "bg-orange-100 text-orange-700"
+                          : "bg-yellow-100 text-yellow-700"
+                    }`}
+                  >
+                    {penalty.status.charAt(0).toUpperCase() + penalty.status.slice(1)}
+                  </span>
+                </div>
+                <p className="text-sm font-semibold text-primary mb-1">{getRestrictionText(penalty.severity)}</p>
+                <p className="text-sm text-muted-foreground">{penalty.reason}</p>
+              </div>
             </div>
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                penalty.severity === "high"
-                  ? "bg-destructive/20 text-destructive"
-                  : penalty.severity === "medium"
-                    ? "bg-secondary/20 text-secondary"
-                    : "bg-yellow-100 text-yellow-700"
-              }`}
-            >
-              {penalty.severity.charAt(0).toUpperCase() + penalty.severity.slice(1)}
-            </span>
+            <div className="space-y-2 text-sm border-t border-border pt-3 mt-3">
+              <p className="text-foreground">
+                <span className="font-semibold">Issued:</span> {new Date(penalty.issuedDate).toLocaleDateString("en-IN")}
+              </p>
+              {penalty.expiresAt && (
+                <p className="text-foreground">
+                  <span className="font-semibold">Expires:</span> {new Date(penalty.expiresAt).toLocaleDateString("en-IN")}
+                </p>
+              )}
+            </div>
           </div>
-          <div className="space-y-2 text-sm">
-            <p className="text-foreground">
-              <span className="font-semibold">Active from:</span> {penalty.startDate}
-            </p>
-            <p className="text-foreground">
-              <span className="font-semibold">Expires:</span> {penalty.endDate}
-            </p>
-          </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

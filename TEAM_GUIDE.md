@@ -1,10 +1,10 @@
-# Quick Start Guide for Team Members
+# KLE Tech Sports Arena - Team Guide
 
-## First Time Setup (For Your Classmates)
+## First Time Setup
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/YOUR_USERNAME/sports-arena-court-booking.git
+git clone https://github.com/hegdev13/sports-arena-court-booking.git
 cd sports-arena-court-booking
 ```
 
@@ -36,11 +36,16 @@ npm run dev
 Visit http://localhost:3000
 
 ### 6. Test the Application
-Use the test account:
-- Email: `test@university.edu`
-- Password: `password123`
 
-Or create a new account at http://localhost:3000/signup
+**Student Account:**
+- Email: `test@kletech.ac.in`
+- Password: `test123`
+
+**Staff Account:**
+- Email: `staff@kletech.ac.in`
+- Password: `staff123`
+
+Or create a new student account at http://localhost:3000/signup
 
 ## Daily Workflow
 
@@ -79,25 +84,41 @@ git push origin feature/your-feature-name
 
 ## What's Already Built
 
-### ✅ Backend (Complete)
-- **Authentication System**
-  - User registration with password hashing
-  - Login/logout functionality
-  - Session management
-  - Protected routes
+### ✅ Complete Features
 
-- **Database**
-  - Users table
-  - Courts table (2 Badminton, 3 Table Tennis, 2 Squash)
-  - Bookings table
-  - Penalties table
-  - Events table
+#### Authentication & Authorization
+- User registration with bcrypt password hashing
+- Role-based access (student/staff/admin)
+- Secure session management with NextAuth v5
+- Protected routes and API endpoints
+- Working logout functionality
 
-- **API Endpoints**
-  - `/api/auth/register` - Sign up
-  - `/api/auth/[...nextauth]` - Login
-  - `/api/bookings` - Create/view bookings
-  - `/api/bookings/[id]` - Update/delete booking
+#### Booking System
+- 24-hour advance booking window
+- Real-time availability tracking
+- Booking capacity validation
+- Automatic slot filtering (past slots disabled)
+- Court-specific capacity management
+
+#### Penalty System
+- Low (Warning): No restrictions, 30-day expiry
+- Medium: Max 3 bookings/week, 90-day expiry
+- High: Max 2 bookings/week, 90-day expiry
+- Staff can issue and resolve penalties
+
+#### Staff Management
+- View all bookings with user details
+- Issue penalties for no-shows
+- Custom cancellation with notes
+- Manage penalty status (active/resolved)
+- Create and manage events
+
+#### Database
+- Users (with roles)
+- Courts (7 courts: 2 Badminton, 3 Table Tennis, 2 Squash)
+- Bookings (with 24-hour validation)
+- Penalties (severity-based restrictions)
+- Events (tournaments and activities)
   - `/api/courts` - Get available courts
   - `/api/user/profile` - User profile
   - `/api/penalties` - User penalties

@@ -2,8 +2,10 @@
 
 import type React from "react"
 
-import { useState } from "react"
-import { User, Clock, AlertTriangle, Settings, LogOut } from "lucide-react"
+import { useState, useEffect } from "react"
+import { useSession, signOut } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import { User, Clock, AlertTriangle, Settings, LogOut, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import BookingHistory from "@/components/booking-history"
 import ActivePenalties from "@/components/active-penalties"
@@ -13,6 +15,13 @@ type TabType = "profile" | "history" | "penalties" | "settings"
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<TabType>("profile")
+  const { data: session } = useSession()
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    await signOut({ redirect: false })
+    router.push("/login")
+  }
 
   const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
     { id: "profile", label: "Profile", icon: <User size={20} /> },
@@ -60,7 +69,8 @@ export default function ProfilePage() {
         <div className="mt-12 pt-8 border-t-2 border-border">
           <Button
             size="lg"
-            className="bg-destructive text-destructive-foreground hover:bg-red-700 flex items-center gap-2"
+            onClick={handleLogout}
+            className="bg-destructive text-white hover:bg-red-700 flex items-center gap-2"
           >
             <LogOut size={20} />
             Logout
@@ -72,6 +82,55 @@ export default function ProfilePage() {
 }
 
 function ProfileOverview() {
+  const { data: session } = useSession()
+  const [stats, setStats] = useState({
+    totalBookings: 0,
+    upcomingBookings: 0,
+    activePenalties: 0,
+    loading: true
+  })
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const [bookingsRes, penaltiesRes] = await Promise.all([
+          fetch('/api/bookings'),
+          fetch('/api/penalties')
+        ])
+
+        if (bookingsRes.ok && penaltiesRes.ok) {
+          const bookings = await bookingsRes.json()
+          const penalties = await penaltiesRes.json()
+          
+          const now = new Date()
+          const upcoming = bookings.filter((b: any) => new Date(b.date) >= now).length
+
+          setStats({
+            totalBookings: bookings.length,
+            upcomingBookings: upcoming,
+            activePenalties: penalties.length,
+            loading: false
+          })
+        }
+      } catch (error) {
+        console.error("Error fetching stats:", error)
+        setStats(prev => ({ ...prev, loading: false }))
+      }
+    }
+
+    if (session) {
+      fetchStats()
+    }
+  }, [session])
+
+  if (stats.loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* User Info */}
@@ -80,19 +139,19 @@ function ProfileOverview() {
         <div className="space-y-4">
           <div>
             <p className="text-sm text-muted-foreground">Name</p>
-            <p className="font-semibold text-foreground">John Doe</p>
+            <p className="font-semibold text-foreground">{session?.user?.name || "User"}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Email</p>
-            <p className="font-semibold text-foreground">john.doe@university.edu</p>
+            <p className="font-semibold text-foreground">{session?.user?.email || "N/A"}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">User ID</p>
-            <p className="font-semibold text-foreground">UD-2024-001234</p>
+            <p className="font-semibold text-foreground">{session?.user?.id || "N/A"}</p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Member Since</p>
-            <p className="font-semibold text-foreground">January 15, 2024</p>
+            <p className="text-sm text-muted-foreground">Role</p>
+            <p className="font-semibold text-foreground capitalize">{session?.user?.role || "Student"}</p>
           </div>
         </div>
       </div>
@@ -101,15 +160,15 @@ function ProfileOverview() {
       <div className="space-y-4">
         <div className="bg-primary/10 border-2 border-primary rounded-lg p-6">
           <p className="text-sm text-muted-foreground mb-2">Total Bookings</p>
-          <p className="text-4xl font-bold text-primary">24</p>
+          <p className="text-4xl font-bold text-primary">{stats.totalBookings}</p>
         </div>
-        <div className="bg-green/10 border-2 border-green rounded-lg p-6">
+        <div className="bg-green-100 border-2 border-green-500 rounded-lg p-6">
           <p className="text-sm text-muted-foreground mb-2">Upcoming Bookings</p>
-          <p className="text-4xl font-bold text-green">3</p>
+          <p className="text-4xl font-bold text-green-600">{stats.upcomingBookings}</p>
         </div>
         <div className="bg-destructive/10 border-2 border-destructive rounded-lg p-6">
           <p className="text-sm text-muted-foreground mb-2">Active Penalties</p>
-          <p className="text-4xl font-bold text-destructive">0</p>
+          <p className="text-4xl font-bold text-destructive">{stats.activePenalties}</p>
         </div>
       </div>
     </div>

@@ -189,13 +189,29 @@ export default function StaffDashboard() {
               Welcome, {session?.user.name}! Manage events and facility schedules.
             </p>
           </div>
-          <Button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            Create Event
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => router.push("/staff/bookings")}
+              className="bg-secondary text-white hover:bg-secondary/90 flex items-center gap-2"
+            >
+              <Users className="w-5 h-5" />
+              Manage Bookings
+            </Button>
+            <Button
+              onClick={() => router.push("/staff/penalties")}
+              className="bg-orange-500 text-white hover:bg-orange-600 flex items-center gap-2"
+            >
+              <AlertCircle className="w-5 h-5" />
+              Manage Penalties
+            </Button>
+            <Button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Create Event
+            </Button>
+          </div>
         </div>
 
         {/* Success/Error Messages */}

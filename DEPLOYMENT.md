@@ -1,102 +1,88 @@
-# Vercel Deployment Guide
+# KLE Tech Sports Arena - Vercel Deployment Guide
 
-## Important: Database Configuration for Production
+## Prerequisites
 
-**⚠️ SQLite won't work on Vercel** because Vercel uses serverless functions that have read-only filesystems. You need to use a hosted database.
+✅ Project uses PostgreSQL (configured in `prisma/schema.prisma`)  
+✅ Works locally and on Vercel  
+✅ No SQLite migration needed
 
-### Recommended Database Options (Free Tier Available)
+## Step 1: Choose PostgreSQL Database
 
-#### Option 1: Vercel Postgres (Recommended)
-Vercel's own PostgreSQL database with generous free tier.
+### Option 1: Vercel Postgres (Recommended)
+**Free tier:** 256 MB storage, 60 hours compute/month
 
-1. Go to your Vercel dashboard
-2. Select your project
-3. Go to **Storage** tab
-4. Click **Create Database** → Choose **Postgres**
-5. Vercel will automatically set `POSTGRES_URL` environment variable
+1. Go to [vercel.com/storage](https://vercel.com/storage)
+2. Create a new Postgres database
+3. Vercel automatically sets these environment variables:
+   - `POSTGRES_PRISMA_URL` (for app connections)
+   - `POSTGRES_URL_NON_POOLING` (for migrations)
 
-**Update Prisma Schema:**
-```prisma
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-```
+### Option 2: Neon (Alternative)
+**Free tier:** 3 GB storage, always active
 
-#### Option 2: Neon (PostgreSQL)
-Serverless Postgres with 3GB free tier.
+1. Sign up at [neon.tech](https://neon.tech)
+2. Create a new project: "Sports Arena"
+3. Copy **both** connection strings:
+   - Pooled connection (ends with `?sslmode=require`)
+   - Direct connection (from "Connection Details" → "Direct connection")
 
-1. Sign up at https://neon.tech
+### Option 3: Supabase
+**Free tier:** 500 MB storage, 2 GB transfer/month
+
+1. Sign up at [supabase.com](https://supabase.com)
 2. Create a new project
-3. Copy the connection string
-4. Add to Vercel environment variables as `DATABASE_URL`
+3. Go to Project Settings → Database
+4. Copy connection strings from "Connection string" section
 
-#### Option 3: PlanetScale (MySQL)
-Serverless MySQL with 5GB free tier.
-
-1. Sign up at https://planetscale.com
-2. Create a new database
-3. Copy the connection string
-4. Update Prisma schema to use `mysql` provider
-
-## Deployment Steps
-
-### Step 1: Choose and Set Up Your Database
-
-Pick one of the options above and get your database connection string.
-
-### Step 2: Update Prisma Schema (if not using Vercel Postgres)
-
-Edit `prisma/schema.prisma`:
-
-**For PostgreSQL (Neon or Vercel Postgres):**
-```prisma
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-```
-
-**For MySQL (PlanetScale):**
-```prisma
-datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
-  relationMode = "prisma"
-}
-```
-
-### Step 3: Push to GitHub
+## Step 2: Push Code to GitHub
 
 ```bash
+# Commit any pending changes
 git add .
-git commit -m "Prepare for Vercel deployment"
+git commit -m "Configure for Vercel deployment"
 git push origin main
 ```
 
-### Step 4: Deploy to Vercel
+## Step 3: Deploy to Vercel
 
-#### Via Vercel Dashboard (Recommended)
+### Via Vercel Dashboard
 
-1. Go to https://vercel.com
-2. Click **Add New** → **Project**
-3. Import your GitHub repository: `sports-arena-court-booking`
-4. Configure project:
+1. Go to [vercel.com/new](https://vercel.com/new)
+2. Click **Import Git Repository**
+3. Select `sports-arena-court-booking`
+4. Configure project (auto-detected as Next.js):
    - **Framework Preset:** Next.js
-   - **Build Command:** `prisma generate && next build`
-   - **Output Directory:** `.next`
+   - **Build Command:** `prisma generate && next build` (default)
+   - **Install Command:** `npm install`
 
-5. **Add Environment Variables** (click Environment Variables):
+5. **Add Environment Variables**
+
+   **If using Vercel Postgres:**
    ```
-   DATABASE_URL=your_database_connection_string
-   NEXTAUTH_URL=https://your-project.vercel.app
-   NEXTAUTH_SECRET=your_secret_key_here_generate_a_long_random_string
+   DATABASE_URL=${POSTGRES_PRISMA_URL}
+   DIRECT_URL=${POSTGRES_URL_NON_POOLING}
+   NEXTAUTH_URL=https://your-project-name.vercel.app
+   NEXTAUTH_SECRET=<generate-random-32-chars>
    NODE_ENV=production
+   ```
+
+   **If using Neon/Supabase:**
+   ```
+   DATABASE_URL=postgresql://user:pass@host/db?sslmode=require
+   DIRECT_URL=postgresql://user:pass@host/db?sslmode=require
+   NEXTAUTH_URL=https://your-project-name.vercel.app
+   NEXTAUTH_SECRET=<generate-random-32-chars>
+   NODE_ENV=production
+   ```
+
+   **Generate NEXTAUTH_SECRET:**
+   ```bash
+   openssl rand -base64 32
    ```
 
 6. Click **Deploy**
 
-#### Via Vercel CLI (Alternative)
+### Via Vercel CLI (Alternative)
 
 ```bash
 # Install Vercel CLI
@@ -106,51 +92,47 @@ npm i -g vercel
 vercel login
 
 # Deploy
-vercel
-
-# Add environment variables
-vercel env add DATABASE_URL
-vercel env add NEXTAUTH_URL
-vercel env add NEXTAUTH_SECRET
-vercel env add NODE_ENV
-
-# Deploy to production
 vercel --prod
 ```
 
-### Step 5: Initialize Database
+## Step 4: Run Database Migrations
 
-After deployment, you need to create the tables:
+After first deployment, initialize the database:
 
-**Option A: Using Vercel CLI**
+**Option A: Using Vercel CLI (Recommended)**
+
 ```bash
-# Set environment variables locally for the deployment
+# Pull production environment variables
 vercel env pull .env.production
 
-# Push schema to production database
-npx prisma db push
+# Run migrations using DIRECT_URL (not pooled connection)
+DIRECT_URL="your_direct_url_here" npx prisma migrate deploy
 
-# Seed the database
-npx prisma db seed
+# Seed database with test data
+DIRECT_URL="your_direct_url_here" npx tsx prisma/seed.ts
 ```
 
-**Option B: Using Prisma Studio**
+**Option B: Automatic Migrations on Deploy**
+
+Update build command in Vercel project settings:
+
 ```bash
-# Connect to production database
-DATABASE_URL="your_production_db_url" npx prisma studio
+prisma generate && prisma migrate deploy && next build
 ```
 
-**Option C: Add Migration as Build Step**
-Update `package.json`:
-```json
-"scripts": {
-  "build": "prisma generate && prisma db push --accept-data-loss && next build"
-}
-```
+⚠️ **Important Notes:**
+- Use `DIRECT_URL` for migrations (direct connection), not `DATABASE_URL` (pooled)
+- First deployment may fail until migrations run - this is expected
+- After migrations complete, trigger a redeploy
 
-⚠️ **Warning:** This will run migrations on every deploy. Only use during initial setup.
+## Step 5: Verify Deployment
 
-### Step 6: Seed Production Database
+1. Visit your deployed URL: `https://your-project-name.vercel.app`
+2. Test login with credentials:
+   - **User:** test@kletech.ac.in / test123
+   - **Staff:** staff@kletech.ac.in / staff123
+3. Check that booking system works
+4. Verify staff features (manage bookings, penalties, events)
 
 Create a Vercel Serverless Function to seed:
 
@@ -211,58 +193,114 @@ After deployment:
 
 ## Troubleshooting
 
-### Build fails with "Can't reach database"
-- Vercel needs `DATABASE_URL` at build time
-- Add it to environment variables and redeploy
+### Build Fails: "Can't reach database server"
 
-### Pages return 500 errors
-- Check Vercel function logs
-- Ensure all environment variables are set
-- Verify database connection string
+**Cause:** Vercel can't connect to database during build
 
-### "Prisma Client not found"
-- Ensure `postinstall` script runs: `"postinstall": "prisma generate"`
-- Check build logs to confirm Prisma generation
+**Solution:**
+- Ensure `DATABASE_URL` is set in environment variables
+- For Neon/Supabase: add `?sslmode=require` to connection string
+- Check database is not paused (Neon auto-pauses after inactivity)
 
-### Middleware errors
-- Ensure `NEXTAUTH_SECRET` is set
-- Check that it matches between build and runtime
+### Deployment Succeeds but Pages Show 500 Errors
 
-## Quick Start Checklist
+**Cause:** Database tables don't exist yet
 
-- [ ] Choose database provider (Vercel Postgres, Neon, or PlanetScale)
-- [ ] Update `prisma/schema.prisma` with correct provider
-- [ ] Create database and get connection string
-- [ ] Push code to GitHub
-- [ ] Import project to Vercel
-- [ ] Add environment variables
-- [ ] Deploy
-- [ ] Run database migrations
-- [ ] Seed database
-- [ ] Test the deployment
+**Solution:**
+1. Run migrations: `DIRECT_URL="..." npx prisma migrate deploy`
+2. Check Vercel function logs for specific error message
+3. Verify all environment variables are correctly set
+
+### "Invalid `prisma.client()` invocation"
+
+**Cause:** Connection string format issue
+
+**Solution:**
+- Verify `DATABASE_URL` format: `postgresql://user:pass@host:port/db`
+- Ensure no extra spaces or line breaks in connection string
+- For pooled connections, use `?pgbouncer=true&connection_limit=1`
+
+### Migrations Fail: "relation already exists"
+
+**Cause:** Tables were manually created or migrations ran partially
+
+**Solution:**
+```bash
+# Check migration status
+DIRECT_URL="..." npx prisma migrate status
+
+# Deploy only pending migrations
+DIRECT_URL="..." npx prisma migrate deploy
+```
+
+### Function Timeout on First Load
+
+**Cause:** Cold start with Prisma client generation
+
+**Solution:**
+- This is normal on first request after deployment
+- Subsequent requests will be fast (< 100ms)
+- Consider Vercel Pro for lower cold start times
+
+### Can't Login After Deployment
+
+**Cause:** Authentication configuration issue
+
+**Solution:**
+1. Verify `NEXTAUTH_SECRET` is set in Vercel environment variables
+2. Ensure `NEXTAUTH_URL` matches deployment URL exactly (no trailing slash)
+3. Check browser console for specific auth errors
+4. Clear cookies and try again
+
+## Environment Variables Reference
+
+| Variable | Example | Required | Description |
+|----------|---------|----------|-------------|
+| `DATABASE_URL` | `postgresql://...?pgbouncer=true` | ✅ | Pooled connection for app |
+| `DIRECT_URL` | `postgresql://...` | ✅ | Direct connection for migrations |
+| `NEXTAUTH_URL` | `https://your-app.vercel.app` | ✅ | Your deployment URL |
+| `NEXTAUTH_SECRET` | `<32+ chars>` | ✅ | `openssl rand -base64 32` |
+| `NODE_ENV` | `production` | ✅ | Always production |
+
+## Post-Deployment Checklist
+
+- [ ] All environment variables configured in Vercel
+- [ ] Database migrations completed successfully
+- [ ] Test data seeded (test@kletech.ac.in, staff@kletech.ac.in)
+- [ ] User login works
+- [ ] Booking creation works
+- [ ] Staff login works
+- [ ] Staff can manage bookings and penalties
+- [ ] Events display on homepage
+- [ ] Calendar shows real-time availability
+
+## Updating Deployment
+
+```bash
+# Make code changes locally
+git add .
+git commit -m "Your changes"
+git push origin main
+
+# Vercel auto-deploys on push to main
+# Or manually trigger deployment:
+vercel --prod
+```
 
 ## Cost Considerations
 
 **Free Tier Limits:**
-- **Vercel:** 100GB bandwidth, 6000 build minutes/month
-- **Vercel Postgres:** 256MB storage, 60 compute hours
-- **Neon:** 3GB storage, unlimited databases
-- **PlanetScale:** 5GB storage, 1 billion row reads
+- **Vercel:** 100GB bandwidth, 6000 build minutes/month, hobby projects
+- **Vercel Postgres:** 256MB storage, 60 compute hours/month
+- **Neon:** 3GB storage, unlimited databases, 0.5 CPU hours/month
+- **Supabase:** 500MB storage, 2GB bandwidth, pauses after 1 week inactivity
 
-All options are free for development and small projects!
-
-## Next Steps
-
-After deployment:
-1. Set up custom domain (optional)
-2. Configure analytics
-3. Add monitoring (Vercel Analytics included)
-4. Set up error tracking (Sentry)
-5. Configure CI/CD for automatic deployments
+All options are free for development and academic projects!
 
 ---
 
-Need help? Check:
-- [Vercel Docs](https://vercel.com/docs)
-- [Prisma Docs](https://www.prisma.io/docs)
-- [NextAuth Docs](https://next-auth.js.org)
+**Need help?**
+- [Vercel Documentation](https://vercel.com/docs)
+- [Prisma Documentation](https://www.prisma.io/docs)
+- [NextAuth Documentation](https://next-auth.js.org)
+- [DATABASE_SETUP.md](./DATABASE_SETUP.md) - Local database setup guide

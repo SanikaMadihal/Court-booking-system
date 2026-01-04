@@ -59,20 +59,54 @@ export async function POST(req: Request) {
       )
     }
 
-    // Check if slot is already booked
-    const existingBooking = await prisma.booking.findUnique({
+    // Validate 24-hour booking window
+    const bookingDateTime = new Date(date)
+    const [hours, minutes] = startTime.split(':').map(Number)
+    bookingDateTime.setHours(hours, minutes, 0, 0)
+    
+    const now = new Date()
+    const hoursDiff = (bookingDateTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+    
+    if (hoursDiff < 0) {
+      return NextResponse.json(
+        { error: "Cannot book slots in the past" },
+        { status: 400 }
+      )
+    }
+    
+    if (hoursDiff > 24) {
+      return NextResponse.json(
+        { error: "Bookings are only allowed within 24 hours" },
+        { status: 400 }
+      )
+    }
+
+    // Get court capacity
+    const court = await prisma.court.findUnique({
+      where: { id: courtId }
+    })
+
+    if (!court) {
+      return NextResponse.json(
+        { error: "Court not found" },
+        { status: 404 }
+      )
+    }
+
+    // Check total participants for this slot
+    const existingBookings = await prisma.booking.findMany({
       where: {
-        courtId_date_startTime: {
-          courtId,
-          date: new Date(date),
-          startTime
-        }
+        courtId,
+        date: new Date(date),
+        startTime
       }
     })
 
-    if (existingBooking) {
+    const totalParticipants = existingBookings.reduce((sum, booking) => sum + booking.participants, 0)
+    
+    if (totalParticipants + (participants || 1) > court.maxCapacity) {
       return NextResponse.json(
-        { error: "This time slot is already booked" },
+        { error: `Court is full (${totalParticipants}/${court.maxCapacity} booked)` },
         { status: 400 }
       )
     }

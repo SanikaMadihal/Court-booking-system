@@ -87,7 +87,7 @@ export default function StaffLoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                placeholder="staff@sportsarena.com"
+                placeholder="staff@kletech.ac.in"
               />
             </div>
             <div>

@@ -12,8 +12,8 @@ export default function Footer() {
               <Mail size={20} />
               Contact Us
             </h3>
-            <Link href="mailto:arena@university.edu" className="text-primary hover:underline">
-              arena@university.edu
+            <Link href="mailto:arena@kletech.ac.in" className="text-primary hover:underline">
+              arena@kletech.ac.in
             </Link>
           </div>
 
@@ -23,7 +23,7 @@ export default function Footer() {
               <Phone size={20} />
               Concerns
             </h3>
-            <p className="text-foreground">+1 (555) 123-4567</p>
+            <p className="text-foreground">+91 9876543210</p>
             <p className="text-sm text-muted-foreground mt-2">Available 9am - 5pm, Mon-Fri</p>
           </div>
 
@@ -33,7 +33,7 @@ export default function Footer() {
               <MessageSquare size={20} />
               Feedback
             </h3>
-            <Link href="mailto:feedback@university.edu" className="text-primary hover:underline">
+            <Link href="mailto:feedback@kletech.ac.in" className="text-primary hover:underline">
               Share your feedback
             </Link>
           </div>
