@@ -74,8 +74,8 @@ A full-stack Next.js application for managing sports court bookings at KLE Techn
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/hegdev13/sports-arena-court-booking.git
-cd sports-arena-court-booking
+git clone https://github.com/SanikaMadihal/Court-booking-system.git
+cd Court-booking-system
 ```
 
 2. **Install dependencies**
@@ -100,7 +100,7 @@ See [DATABASE_SETUP.md](DATABASE_SETUP.md) for detailed instructions.
 
 4. **Configure environment variables**
 ```bash
-cp .env.example .env
+copy .env.example .env
 ```
 
 Edit `.env` and add your database connection:
